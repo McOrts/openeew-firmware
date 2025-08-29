@@ -495,11 +495,12 @@ void Send10Seconds2Cloud()
   payload["device_id"] = deviceID;
   payload["sr"] = TrueSampleRate;
   payload["user"] = user;
-  payload["network"] = network;
-  payload["station"] = station;
+  payload["zone"] = zone;
+  payload["cp"] = cp;
 
   getNTPtimestamp();
   payload["device_t"] = serialized(String(device_t, 6));
+  payload["hight_sta_lta"] = bPossibleEarthQuake;
 
   // Generate an array of json objects that contain x,y,z arrays of 32 floats.
   // [{"x":[],"y":[],"z":[]},{"x":[],"y":[],"z":[]}]
@@ -553,12 +554,12 @@ void SendLiveData2Cloud()
   payload["device_id"] = deviceID;
   payload["sr"] = TrueSampleRate; // Adxl355SampleRate;
   payload["user"] = user;
-  payload["network"] = network;
-  payload["station"] = station;
-
+  payload["zone"] = zone;
+  payload["cp"] = cp;
+  
   getNTPtimestamp();
   payload["device_t"] = serialized(String(device_t, 6));
-
+  payload["hight_sta_lta"] = bPossibleEarthQuake;
 
   // Generate an array of json objects that contain x,y,z arrays of 32 floats.
   // [{"x":[],"y":[],"z":[]},{"x":[],"y":[],"z":[]}]
@@ -591,10 +592,10 @@ void SendLiveData2Cloud()
   int jsonSize = measureJson(jsonDoc);
   Serial.print("Sending 1 second packet: User: ");
   Serial.print(user);
-  Serial.print(", Net: ");
-  Serial.print(network);
-  Serial.print(", Sta: ");
-  Serial.print(station);
+  Serial.print(", Zone: ");
+  Serial.print(zone);
+  Serial.print(", CP: ");
+  Serial.print(cp);
   Serial.print(", Size: ");
   Serial.print(jsonSize);
   Serial.print(", NTP time: ");
@@ -639,12 +640,9 @@ void messageReceived(char *topic, byte *payload, unsigned int length)
     auto alarm = cmdData["state"]["desired"]["alarm"];
     auto samplerate = cmdData["state"]["desired"]["samplerate"];
     auto staltamode = cmdData["state"]["desired"]["acqmode"];
-    //auto senddata = cmdData["state"]["desired"]["senddata"];
     auto staltathresh = cmdData["state"]["desired"]["staltathresh"];
-    //auto forcerestart = cmdData["state"]["desired"]["forcerestart"];
-    // auto factoryreset = cmdData["state"]["desired"]["factoryreset"];
-    //auto soh = cmdData["state"]["desired"]["soh"];
-    //auto timentp = cmdData["state"]["desired"]["timentp"];
+    auto reset = cmdData["state"]["desired"]["reset"];
+
     auto pub = false;
 
     // ======= Test device commands =======
@@ -659,6 +657,14 @@ void messageReceived(char *topic, byte *payload, unsigned int length)
     }  
 
     // ======= Configuration commands =======
+
+    // ======= Reset =======
+    if (!reset.as<String>().equalsIgnoreCase("null") && reset.as<bool>() == true) {
+      Serial.println("MQTT command: reset=true -> ESP.restart()");
+      Serial.flush();         
+      delay(100);             
+      ESP.restart();          
+    }
 
     // STA/LTA mode
     if (!staltamode.as<String>().equalsIgnoreCase("null") && STALTAMODE != staltamode.as<bool>())
